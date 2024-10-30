@@ -1,0 +1,8 @@
+selenium==4.25.0
+pinecone-client==5.0.1
+openai==1.52.2
+schedule==1.2.2
+transformers==4.33.2   # For sentiment analysis
+torch==2.0.1           # Required by transformers for running NLP models
+langchain==0.0.238     # For prompt management and LLM chaining
+tenacity

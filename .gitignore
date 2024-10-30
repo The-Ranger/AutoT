@@ -1,0 +1,14 @@
+*.json
+*.ini
+*.exe
+# Ignore Python bytecode and cache files
+__pycache__/
+*.py[cod]
+
+# Ignore virtual environment directories
+venv/
+.env/
+
+# Ignore other common folders and files you don’t want to track
+*.log
+*.sqlite
