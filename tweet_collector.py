@@ -15,6 +15,16 @@ class TweetCollector:
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         
+        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.111 Safari/537.36")
+        chrome_options.add_argument("--window-size=1920x1080")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--log-level=3")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
+        chrome_options.add_argument("--user-data-dir=C:\Development\chrome_profile")
+        
         # Initialize ChromeDriver with service
         service = Service(executable_path=config.CHROMEDRIVER_PATH)
         self.driver = webdriver.Chrome(service=service, options=chrome_options)

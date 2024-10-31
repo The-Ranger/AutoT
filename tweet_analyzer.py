@@ -1,5 +1,6 @@
 # tweet_analyzer.py
 from datetime import datetime, timedelta
+import time
 import openai
 import hashlib
 import random
@@ -15,8 +16,7 @@ class TweetAnalyzer:
         self.sentiment_analyzer = pipeline("sentiment-analysis")
         openai.api_key = config.OPENAI_API_KEY
         self.styles = [
-            "funny", "sarcastic", "bold and thought-provoking",
-            "informative and scientific", "empathetic and inspirational"
+            "funny", "bold and thought-provoking", "informative and scientific"
         ]
 
     def get_trending_topics(self):
@@ -39,74 +39,74 @@ class TweetAnalyzer:
             return None
 
     def analyze(self, tweets, account):
-        analysis_results = []
-        for tweet in tweets:
-            content = tweet.get('content', '').strip()[:512]
-            if not content:
-                continue
+            analysis_results = []
+            for tweet in tweets:
+                content = tweet.get('content', '').strip()[:512]
+                if not content:
+                    continue
 
-            sentiment = self.sentiment_analyzer(content)[0]
-            vector_id = hashlib.md5(content.encode('utf-8')).hexdigest()
-            embedding = self.get_embedding(content)
-            timestamp = datetime.utcnow().isoformat()  # New timestamp
+                sentiment = self.sentiment_analyzer(content)[0]
+                vector_id = hashlib.md5(content.encode('utf-8')).hexdigest()
+                embedding = self.get_embedding(content)
+                timestamp = int(time.time())  # Store current time as a Unix timestamp
 
-            if embedding:
-                try:
-                    # Store tweet with timestamp
-                    self.index.upsert([
-                        (vector_id, embedding, {
-                            'sentiment': sentiment['label'],
-                            'style': self.get_random_style(),
-                            'engagement': tweet.get('engagement', 0),
-                            'account': account,
-                            'content': content,
-                            'timestamp': timestamp  # Store timestamp
-                        })
-                    ])
-                except Exception as e:
-                    print(f"[ERROR] Error upserting to Pinecone: {e}")
-            analysis_results.append({
-                'content': content,
-                'sentiment': sentiment['label'],
-                'style': self.get_random_style(),
-                'engagement': tweet.get('engagement', 0),
-                'timestamp': timestamp
-            })
-        
-        return analysis_results
+                if embedding:
+                    try:
+                        # Store tweet with timestamp as an integer
+                        self.index.upsert([
+                            (vector_id, embedding, {
+                                'sentiment': sentiment['label'],
+                                'style': self.get_random_style(),
+                                'engagement': tweet.get('engagement', 0),
+                                'account': account,
+                                'content': content,
+                                'timestamp': timestamp  # Save as Unix timestamp
+                            })
+                        ])
+                    except Exception as e:
+                        print(f"[ERROR] Error upserting to Pinecone: {e}")
+                analysis_results.append({
+                    'content': content,
+                    'sentiment': sentiment['label'],
+                    'style': self.get_random_style(),
+                    'engagement': tweet.get('engagement', 0),
+                    'timestamp': timestamp
+                })
+            
+            return analysis_results
 
     def get_recent_analysis(self, account):
-            try:
-                # Use config.RECENT_HOURS for time filtering
-                time_limit = (datetime.utcnow() - timedelta(hours=config.RECENT_HOURS)).isoformat()
-                filter = {
-                    "account": {"$eq": account},
-                    "timestamp": {"$gte": time_limit}  # Filter for recent tweets
-                }
-                
-                # Use config.TOP_K for the number of tweets to retrieve
-                result = self.index.query(
-                    vector=[0.0] * 1536,
-                    top_k=config.TOP_K,
-                    include_metadata=True,
-                    filter=filter
-                )
-                
-                analysis_results = []
-                for match in result.matches:
-                    content = match.metadata.get('content', '')
-                    analysis_results.append({
-                        'content': content,
-                        'sentiment': match.metadata.get('sentiment', ''),
-                        'style': match.metadata.get('style', ''),
-                        'engagement': match.metadata.get('engagement', 0)
-                    })
-                
-                return analysis_results
-            except Exception as e:
-                print(f"[ERROR] Error querying Pinecone: {e}")
-                return []
-                
+        try:
+            # Calculate the time limit in Unix timestamp format
+            time_limit = int(time.time()) - config.RECENT_HOURS * 3600
+            filter = {
+                "account": {"$eq": account},
+                "timestamp": {"$gte": time_limit}  # Use Unix timestamp for recent tweets
+            }
+            
+            # Use config.TOP_K for the number of tweets to retrieve
+            result = self.index.query(
+                vector=[0.0] * 1536,
+                top_k=config.TOP_K,
+                include_metadata=True,
+                filter=filter
+            )
+            
+            analysis_results = []
+            for match in result.matches:
+                content = match.metadata.get('content', '')
+                analysis_results.append({
+                    'content': content,
+                    'sentiment': match.metadata.get('sentiment', ''),
+                    'style': match.metadata.get('style', ''),
+                    'engagement': match.metadata.get('engagement', 0)
+                })
+            
+            return analysis_results
+        except Exception as e:
+            print(f"[ERROR] Error querying Pinecone: {e}")
+            return []
+                        
     def update_with_feedback(self, engagement_data):
         print("\n[INFO] Updating Pinecone with feedback...")
         
