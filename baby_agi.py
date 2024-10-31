@@ -26,34 +26,27 @@ class BabyAGI:
             print(f"[INFO] Analysis complete. {len(analysis_results)} tweets analyzed.")
 
     def generate_and_schedule_tweets(self):
-        print("\n[INFO] Starting tweet generation and scheduling...")
-        for account in config.TARGET_ACCOUNTS:
-            print(f"[INFO] Fetching recent analysis for '{account}'...")
-            analysis_results = self.analyzer.get_recent_analysis(account)
+            print("\n[INFO] Starting tweet generation and scheduling...")
+            for account in config.TARGET_ACCOUNTS:
+                print(f"[INFO] Fetching recent analysis for '{account}'...")
+                analysis_results = self.analyzer.get_recent_analysis(account)  # No need to pass top_k or recent_hours
 
-            if not analysis_results:
-                print(f"[WARNING] No recent analysis found for '{account}'. Skipping tweet generation.")
-                continue
+                if not analysis_results:
+                    print(f"[WARNING] No recent analysis found for '{account}'. Skipping tweet generation.")
+                    continue
 
-            print(f"[INFO] {len(analysis_results)} analysis results fetched.")
-            generated_tweets = []
+                generated_tweets = []
+                for analysis in analysis_results:
+                    tweet_content = self.generator.generate_tweet(
+                        analysis_context=analysis.get('content', ''),
+                        style=analysis.get('style', 'neutral'),
+                        trending_topics=self.analyzer.get_trending_topics()
+                    )
+                    generated_tweets.append(tweet_content)
 
-            # Iterate over the analysis results and generate tweets
-            for analysis in analysis_results:
-                analysis_context = analysis.get('content', '')
-                sentiment = analysis.get('sentiment', 'neutral')
-                style = analysis.get('style', 'neutral')
-
-                tweet_content = self.generator.generate_tweet(
-                    analysis_context=analysis_context,
-                    style=style,
-                    trending_topics=self.analyzer.get_trending_topics()
-                )
-                generated_tweets.append(tweet_content)
-
-            print(f"[INFO] {len(generated_tweets)} tweets generated for '{account}'.")
-            self.scheduler.schedule_tweets(generated_tweets)
-
+                self.scheduler.schedule_tweets(generated_tweets)
+                print(f"[INFO] {len(generated_tweets)} tweets generated for '{account}'.")
+                                
     def monitor_engagement(self):
         """Monitors engagement of posted tweets and updates feedback."""
         print("\n[INFO] Monitoring engagement...")
